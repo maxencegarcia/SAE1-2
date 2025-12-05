@@ -64,32 +64,36 @@ public class Brouillimg {
     }
 
     // Genere une permutation des lignes selon une cle
-    public static int[] generatePermutation(int size, int key) {
-
-        int[] scrambleTable = new int[size]; // Cree un tableau de taille = nombre de lignes
-
-        for (int i = 0; i < size; i++){
-            scrambleTable[i] = i; // Remplit le tableau avec l'identite (0,1,2,...)
-            
-        } 
-
-        return scrambleTable; // Retourne la permutation (actuellement aucune permutation)
+    public static int[] generatePermutation(int size, int key){
+        int[] scrambleTable = new int[size];
+        int listesave;
+        for (int i = 0; i < size; i++) {
+            scrambleTable[i]=i;
+            listesave = scrambleTable[i];
+            scrambleTable[i]=scrambleTable[scrambledId(i,size,key)];
+            scrambleTable[scrambledId(i,size,key)]=listesave;
+        };
+        return scrambleTable;
     }
 
-    // Melange les lignes d\u2019une image selon la permutation
+    /**
+     * Mélange les lignes d'une image selon une permutation donnée.
+     * @param inputImg image d'entrée
+     * @param perm permutation des lignes (taille = hauteur de l'image)
+     * @return image de sortie avec les lignes mélangées
+     */
     public static BufferedImage scrambleLines(BufferedImage inputImg, int[] perm){
+        int width = inputImg.getWidth();
+        int height = inputImg.getHeight();
+        if (perm.length != height) throw new IllegalArgumentException("Taille d'image <> taille permutation");
 
-        int width = inputImg.getWidth();   // Largeur de l\u2019image
-        int height = inputImg.getHeight(); // Hauteur de l\u2019image
+        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        int[] scrambleTable=generatePermutation(size, key);
+        for(int y = 0; y<scrambleTable.length; y++){
+            out = out + inputImg[scrambleTable[y]];
+        }
 
-        if (perm.length != height) throw new IllegalArgumentException("Taille d'image <> taille permutation"); // Verifie coherence
-
-        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // Cree une nouvelle image vide
-
-        // *** Rien n\u2019est fait ici : les lignes ne sont pas copiees dans l\u2019image de sortie ***
-        // Cette fonction doit normalement copier inputImg.getRGB(...) selon l'ordre de perm.
-
-        return out; // Retourne une image vide
+        return out;
     }
 
     public static int scrambledId(int id, int size, int key) {
