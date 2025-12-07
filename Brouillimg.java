@@ -63,55 +63,93 @@ public class Brouillimg {
         return outGL; // Retourne l\u2019image convertie en gris
     }
 
-    // Genere une permutation des lignes selon une cle
-    public static int[] generatePermutation(int size, int key){
+    
+    public static int[] generatePermutation(int size, int key) {
         int[] scrambleTable = new int[size];
-        int listesave;
+        
+        // Pour chaque ligne i, on calcule sa position de destination
         for (int i = 0; i < size; i++) {
-            scrambleTable[i]=i;
-            listesave = scrambleTable[i];
-            scrambleTable[i]=scrambleTable[scrambledId(i,size,key)];
-            scrambleTable[scrambledId(i,size,key)]=listesave;
-        };
+            scrambleTable[i] = scrambledId(i, size, key);
+        }
+        
         return scrambleTable;
     }
 
-    /**
-     * Mélange les lignes d'une image selon une permutation donnée.
-     * @param inputImg image d'entrée
-     * @param perm permutation des lignes (taille = hauteur de l'image)
-     * @return image de sortie avec les lignes mélangées
-     */
-    public static BufferedImage scrambleLines(BufferedImage inputImg, int[] perm){
+
+    public static BufferedImage scrambleLines(BufferedImage inputImg, int[] perm) {
         int width = inputImg.getWidth();
         int height = inputImg.getHeight();
-        if (perm.length != height) throw new IllegalArgumentException("Taille d'image <> taille permutation");
-
-        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        int[] scrambleTable=generatePermutation(size, key);
-        for(int y = 0; y<scrambleTable.length; y++){
-            out = out + inputImg[scrambleTable[y]];
+        if (perm.length != height) {
+            throw new IllegalArgumentException("Taille d'image <> taille permutation");
         }
-
+        
+        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        
+        // Pour chaque ligne de l'image d'entrée
+        for (int y = 0; y < height; y++) {
+            // La ligne y de l'entrée va à la position perm[y] dans la sortie
+            int destY = perm[y];
+            
+            // Copier tous les pixels de cette ligne
+            for (int x = 0; x < width; x++) {
+                int pixel = inputImg.getRGB(x, y);
+                out.setRGB(x, destY, pixel);
+            }
+        }
+        
         return out;
+    }
+
+    public static int pgcd(int a, int b){
+        while(b!=0){
+            int tmp = a%b;
+            a=b;
+            b=tmp;
+        }
+        return a;
     }
 
     public static int scrambledId(int id, int size, int key) {
         String keyb = Integer.toBinaryString(key);
-        if(keyb.length()>16){
+        
+        if (keyb.length() > 16) {
             System.out.println("clé trop grande");
             System.exit(0);
         }
-        if(keyb.length()<16){
-            while(keyb.length()<16){
-                keyb = "0" + keyb;
-            }
+        
+        // Padding avec des zéros à gauche pour avoir 16 bits
+        while (keyb.length() < 16) {
+            keyb = "0" + keyb;
         }
+        
+        // Extraire r (9 premiers bits) et s (7 derniers bits)
         String r = keyb.substring(0, 9);
         String s = keyb.substring(9);
         int rd = Integer.parseInt(r, 2);
         int sd = Integer.parseInt(s, 2);
-        id = (rd+(2*sd+1)*id)%size;
+        
+        int coe = 2*sd+1;
+
+        if (pgcd(coe, size)>1) {
+            int ocoe = coe;
+            while (pgcd(coe, size)>1 && coe<size){
+                coe=coe+2; // pour garder l'impaire du coeff
+            }
+
+            if(coe>=size){
+                coe=ocoe;
+                while(pgcd(coe,size) >1 && coe>1){
+                    coe = coe -2; // on check l'autre coter de la liste
+                }
+            }
+        }
+
+
+        // Formule de brouillage: (r + (2*s + 1) * id) mod size
+        id = (rd +coe * id) %size;
+        
+        
+        
         return id;
     }
 }
