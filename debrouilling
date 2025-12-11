@@ -1,0 +1,238 @@
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger; 
+import java.util.concurrent.atomic.AtomicLong;    
+import java.util.stream.IntStream;
+
+public class debrouilling {
+    static final Scanner input = new Scanner(System.in); 
+
+
+    public static void main(String[] args) throws IOException { // Point d'entree du programme, peut lancer des IOExceptions
+
+        if (args.length < 2) { // Verifie qu'il y a au moins deux arguments (image et cle)
+            System.err.println("Usage: java Brouillimg <image_claire> <cle> [image_sortie]"); // Affiche l\u2019usage en cas d\u2019erreur
+            System.exit(1);   // Quitte le programme car il manque des parametres
+        }
+
+        String inPath = args[0]; // Recupere le chemin de l'image d'entree
+        String outPath = (args.length >= 3) ? args[2] : "out.png"; // Recupere le chemin de sortie ou met "out.png" par defaut
+
+        int key = Integer.parseInt(args[1]) & 0x7FFF; // Convertit la cle en int et force à rester sur 15 bits via un masque binaire
+
+        BufferedImage inputImage = ImageIO.read(new File(inPath)); // Charge l'image en memoire depuis le fichier
+        if (inputImage == null) { // Verifie que le format est reconnu
+            throw new IOException("Format d\u2019image non reconnu: " + inPath); // Erreur si ImageIO ne reconnaet pas l'image
+        }
+
+        final int height = inputImage.getHeight(); // Stocke la hauteur de l'image
+        final int width = inputImage.getWidth();   // Stocke la largeur de l'image
+        System.out.println("Dimensions de l'image : " + width + "x" + height); // Affiche les dimensions
+
+        int[][] inputImageGL = rgb2gl(inputImage); // Convertit l\u2019image en niveaux de gris et stocke dans une matrice
+
+        int[] perm = generatePermutation(height, key); // Genere une permutation des lignes basee sur la cle (actuellement identite)
+
+        BufferedImage scrambledImage = scrambleLines(inputImage, perm); // Applique le melange des lignes selon la permutation
+
+        ImageIO.write(scrambledImage, "png", new File(outPath)); // ecrit l'image resultante dans un fichier PNG
+        System.out.println("Image ecrite: " + outPath); // Message de confirmation
+    }
+
+    // Convertit une image en RGB vers une matrice 2D en niveaux de gris
+    public static int[][] rgb2gl(BufferedImage inputRGB) {
+
+        final int height = inputRGB.getHeight(); // Hauteur de l'image
+        final int width = inputRGB.getWidth();   // Largeur de l'image
+        int[][] outGL = new int[height][width];  // Cree une matrice pour stocker les niveaux de gris
+
+        for (int y = 0; y < height; y++) { // Parcours des lignes
+            for (int x = 0; x < width; x++) { // Parcours des colonnes
+
+                int argb = inputRGB.getRGB(x, y); // Recupere la valeur du pixel ARGB
+
+                int r = (argb >> 16) & 0xFF; // Extrait la composante rouge
+                int g = (argb >> 8) & 0xFF;  // Extrait la composante verte
+                int b = argb & 0xFF;         // Extrait la composante bleue
+
+                int gray = (r * 299 + g * 587 + b * 114) / 1000; // Calcule un niveau de gris (sans float, ponderation realiste)
+
+                outGL[y][x] = gray; // Stocke la valeur dans la matrice
+            }
+        }
+        return outGL; // Retourne l\u2019image convertie en gris
+    }
+
+    
+    public static int[] generatePermutation(int size, int key) {
+        int[] scrambleTable = new int[size];
+        String choix=" ";
+        Boolean vérife=false;
+        while(vérife==false) {
+                System.out.println("choisissez cryptage ou decryptage");
+                choix = input.nextLine();
+                if(choix.contentEquals("cryptage")||choix.contentEquals("decryptage")) {
+                    vérife=true;
+                }
+        }
+        // Pour chaque ligne i, on calcule sa position de destination
+        for (int i = 0; i < size; i++) {
+        if (choix.contentEquals("cryptage")|choix.contentEquals("decryptage")) {
+            if (choix.contentEquals("cryptage")) {
+                scrambleTable[i] = scrambledId(i, size, key, choix);
+            }
+            if(choix.contentEquals("decryptage")){
+                int coe = scrambledId(i, size, key, choix);
+                scrambleTable[i] = unscrambledId(i, size, key,coe);
+            }
+        }else{System.exit(0);}
+    }
+
+        return scrambleTable;
+    }
+
+    public static BufferedImage scrambleLines(BufferedImage inputImg, int[] perm) {
+        int width = inputImg.getWidth();
+        int height = inputImg.getHeight();
+        if (perm.length != height) {
+            throw new IllegalArgumentException("Taille d'image <> taille permutation");
+        }
+        
+        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        
+        // Pour chaque ligne de l'image d'entrée
+        for (int y = 0; y < height; y++) {
+            // La ligne y de l'entrée va à la position perm[y] dans la sortie
+            int destY = perm[y];
+            
+            // Copier tous les pixels de cette ligne
+            for (int x = 0; x < width; x++) {
+                int pixel = inputImg.getRGB(x, y);
+                out.setRGB(x, destY, pixel);
+            }
+        }
+        
+        return out;
+    }
+
+    public static int pgcd(int a, int b){
+        while(b!=0){
+            int tmp = a%b;
+            a=b;
+            b=tmp;
+        }
+        return a;
+    }
+// partie a verif  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    public static int unscrambledId(int id, int size, int key, int coe){
+        String keyb = Integer.toBinaryString(key);
+        
+        if (keyb.length()>16) {
+            System.out.println("trop grande");
+            System.exit(0);
+        }
+        while (keyb.length()<16) {
+            keyb = "0" +keyb;
+        }
+        String r = keyb.substring(0, 9);
+        // String s = keyb.substring(9);
+        int rd = Integer.parseInt(r, 2);
+        // int sd = Integer.parseInt(s, 2);
+
+        // int coe = 2 * sd + 1;
+
+        // int out = (rd + coe * id) % size;
+        int invcoe = invaf(coe, size);
+        // int ido = (invcoe * ((scrambledId - rd + size) % size)) % size;
+        int ido = (invcoe * ((id - rd + size) % size)) % size;
+        // int ido = (invcoe * ((coe - rd + size)%size))%size;
+
+        return ido;
+    }
+
+
+
+    public static int invaf(int a, int size) {
+        int sizesave = size;
+        System.out.println(size);
+        int useless = 0, invmod = 1;
+        if (size == 1)
+            return 0;
+
+        while (a > 1) {
+            int q = a / size;
+            int tmp = size;
+            size = a % size;
+            a = tmp;
+            tmp = useless;
+            useless = invmod - q * useless;
+            invmod = tmp;
+        }
+
+        if (invmod < 0)
+            invmod += sizesave;
+
+        return invmod;
+    }
+
+    public static int coecr(int coe, int size){
+        while (pgcd(coe, size)>1 && coe<size){
+            coe=coe+2; // pour garder l'impaire du coeff
+        }
+        return coe;
+    }
+
+
+    public static int scrambledId(int id, int size, int key, String choix) {
+        String keyb = Integer.toBinaryString(key);
+        
+        if (keyb.length() > 16) {
+            System.out.println("clé trop grande");
+            System.exit(0);
+        }
+        
+        // Padding avec des zéros à gauche pour avoir 16 bits
+        while (keyb.length() < 16) {
+            keyb = "0" + keyb;
+        }
+        
+        // Extraire r (9 premiers bits) et s (7 derniers bits)
+        String r = keyb.substring(0, 9);
+        String s = keyb.substring(9);
+        int rd = Integer.parseInt(r, 2);
+        int sd = Integer.parseInt(s, 2);
+        
+        int coe = 2*sd+1;
+
+        if (pgcd(coe, size)>1) {
+            int ocoe = coe;
+            
+            coe = coecr(ocoe, size);
+
+            if(coe>=size){
+                coe=ocoe;
+                while(pgcd(coe,size) >1 && coe>1){
+                    coe = coe -2; // on check l'autre coter de la liste
+                }
+            }
+        }
+
+
+        // Formule de brouillage: (r + (2*s + 1) * id) mod size
+        id = (rd +coe * id) %size;
+        // System.out.println(rd + "  " +sd + " " + size + " " + coe);
+        
+        
+        if (choix.contentEquals("cryptage")) {
+            return id;
+        }
+        if(choix.contentEquals("decryptage")){
+            return coe;
+        }
+        else{return 1;}
+        
+    }
+}
