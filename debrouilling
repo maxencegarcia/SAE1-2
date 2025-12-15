@@ -10,11 +10,14 @@ import java.util.stream.IntStream;
 public class debrouilling {
     static final Scanner input = new Scanner(System.in); 
 
+    private static String choixx;
+
 
     public static void main(String[] args) throws IOException { // Point d'entree du programme, peut lancer des IOExceptions
 
         if (args.length < 2) { // Verifie qu'il y a au moins deux arguments (image et cle)
             System.err.println("Usage: java Brouillimg <image_claire> <cle> [image_sortie]"); // Affiche l\u2019usage en cas d\u2019erreur
+            System.out.println("si vous n'avez pas la clé rentrez un nombre au hasard a la place il faut juste qu'il soit inferieur a  32767");
             System.exit(1);   // Quitte le programme car il manque des parametres
         }
 
@@ -33,13 +36,48 @@ public class debrouilling {
         System.out.println("Dimensions de l'image : " + width + "x" + height); // Affiche les dimensions
 
         int[][] inputImageGL = rgb2gl(inputImage); // Convertit l\u2019image en niveaux de gris et stocke dans une matrice
-
-        int[] perm = generatePermutation(height, key); // Genere une permutation des lignes basee sur la cle (actuellement identite)
+        demchoix();
+        String choix = recupchoix();
+        int keyfinal = key;
+        if (choix.contentEquals("decryptage")) {
+            if (!hasKey()) {
+                keyfinal = breakKey(inputImage);
+                key = keyfinal;
+            }
+        }
+        int[] perm = generatePermutation(height, key, choix); // Genere une permutation des lignes basee sur la cle (actuellement identite)
 
         BufferedImage scrambledImage = scrambleLines(inputImage, perm); // Applique le melange des lignes selon la permutation
 
         ImageIO.write(scrambledImage, "png", new File(outPath)); // ecrit l'image resultante dans un fichier PNG
         System.out.println("Image ecrite: " + outPath); // Message de confirmation
+    }
+
+    public static boolean hasKey() {
+    System.out.println("Avez-vous la clé ? (oui / non)");
+    while (true) {
+        String r = input.nextLine();
+        if (r.equals("oui")) return true;
+        if (r.equals("non")) return false;
+    }
+    }
+
+    public static void demchoix(){
+        String choix=" ";
+        Boolean vérife=false;
+        while(vérife==false) {
+                System.out.println("choisissez cryptage ou decryptage");
+                choix = input.nextLine();
+                if(choix.contentEquals("cryptage")||choix.contentEquals("decryptage")) {
+                    vérife=true;
+                }
+        }
+        choixx = choix;
+    }
+
+
+    public static String recupchoix() {
+    return choixx;
     }
 
     // Convertit une image en RGB vers une matrice 2D en niveaux de gris
@@ -67,17 +105,8 @@ public class debrouilling {
     }
 
     
-    public static int[] generatePermutation(int size, int key) {
+    public static int[] generatePermutation(int size, int key, String choix) {
         int[] scrambleTable = new int[size];
-        String choix=" ";
-        Boolean vérife=false;
-        while(vérife==false) {
-                System.out.println("choisissez cryptage ou decryptage");
-                choix = input.nextLine();
-                if(choix.contentEquals("cryptage")||choix.contentEquals("decryptage")) {
-                    vérife=true;
-                }
-        }
         // Pour chaque ligne i, on calcule sa position de destination
         for (int i = 0; i < size; i++) {
         if (choix.contentEquals("cryptage")|choix.contentEquals("decryptage")) {
@@ -88,7 +117,7 @@ public class debrouilling {
                 int coe = scrambledId(i, size, key, choix);
                 scrambleTable[i] = unscrambledId(i, size, key,coe);
             }
-        }else{System.exit(0);}
+        }
     }
 
         return scrambleTable;
@@ -157,7 +186,6 @@ public class debrouilling {
 
     public static int invaf(int a, int size) {
         int sizesave = size;
-        System.out.println(size);
         int useless = 0, invmod = 1;
         if (size == 1)
             return 0;
@@ -220,7 +248,6 @@ public class debrouilling {
             }
         }
 
-
         // Formule de brouillage: (r + (2*s + 1) * id) mod size
         id = (rd +coe * id) %size;
         // System.out.println(rd + "  " +sd + " " + size + " " + coe);
@@ -235,4 +262,95 @@ public class debrouilling {
         else{return 1;}
         
     }
+
+
+    public static int[][] applyPermutationToGL(int[][] imageGL, int[] perm) {
+    int height = imageGL.length;
+    int width = imageGL[0].length;
+
+    if (perm.length != height) {
+        throw new IllegalArgumentException("Taille image != taille permutation");
+    }
+
+    int[][] out = new int[height][width];
+
+    for (int y = 0; y < height; y++) {
+        int destY = perm[y];
+        for (int x = 0; x < width; x++) {
+            out[destY][x] = imageGL[y][x];
+        }
+    }
+    return out;
 }
+
+
+
+    // ------------------------------------------------------euclide-------------------------------------------------------------
+
+
+
+    public static double euclideanDistance(int[] x, int[] y) {
+    double sum = 0;
+    for (int i = 0; i < x.length; i++) {
+        double d = x[i] - y[i];
+        sum += d * d;
+    }
+    return Math.sqrt(sum);
+}
+
+// ------------------------------------------------------------------modif
+
+// Méthode 2: Calcule le score euclidien total d'une image
+// Plus le score est faible, plus l'image est probablement correcte
+public static double scoreEuclidean(int[][] imageGL) {
+    
+    double totalScore = 0.0;
+    
+    // Parcourir toutes les paires de lignes consécutives
+
+    for (int i = 0; i < imageGL.length - 1; i++) {
+        double distance = euclideanDistance(imageGL[i], imageGL[i + 1]);
+        totalScore = totalScore + distance;
+    }
+    
+    return totalScore;
+}
+
+// Méthode 3: Teste toutes les clés possibles et retourne celle avec le meilleur score
+public static int breakKey(BufferedImage scrambledImage) throws IOException {
+    final int height = scrambledImage.getHeight();
+
+    int[][] scrambledGL = rgb2gl(scrambledImage);
+
+    int bestKey = 0;
+    double bestScore = Double.MAX_VALUE;
+
+    for (int key = 0; key <= 32767; key++) {
+        String choix = recupchoix();
+        int[] inversePerm = generatePermutation(height, key, choix);
+
+        int[][] unscrambledGL = applyPermutationToGL(scrambledGL, inversePerm);
+
+        double score = scoreEuclidean(unscrambledGL);
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestKey = key;
+            System.out.println("meilleur : " + bestKey + " score=" + bestScore);
+        }
+    }
+    return bestKey;
+}
+
+
+
+
+
+
+
+
+
+
+}
+
+
