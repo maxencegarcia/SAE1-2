@@ -300,7 +300,6 @@ public class debrouilling {
 
 // ------------------------------------------------------------------modif
 
-// Méthode 2: Calcule le score euclidien total d'une image
 // Plus le score est faible, plus l'image est probablement correcte
 public static double scoreEuclidean(int[][] imageGL) {
     
@@ -316,7 +315,6 @@ public static double scoreEuclidean(int[][] imageGL) {
     return totalScore;
 }
 
-// Méthode 3: Teste toutes les clés possibles et retourne celle avec le meilleur score
 public static int breakKey(BufferedImage scrambledImage) throws IOException {
     final int height = scrambledImage.getHeight();
 
